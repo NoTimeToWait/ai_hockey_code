@@ -44,6 +44,8 @@ public class Defender implements Role {
 		moveToNet();
 		if (world.getPuck().getOwnerHockeyistId() == self.getId()) handlePass();
 		else handleIncomingPuck();
+		if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
+		
 	}
 	
 	private void moveToNet() {

@@ -72,6 +72,8 @@ public class Attacker implements Role{
 	            move.setTurn(self.getAngleTo(world.getPuck()));
 	            move.setAction(ActionType.TAKE_PUCK);
 	     }
+		 if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
+			
 		
 	}
 	
