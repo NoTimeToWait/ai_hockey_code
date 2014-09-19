@@ -176,6 +176,11 @@ public class Attacker implements Role{
 						break;
 					}
 				}
+		if (enemyGoalie==null) {
+			attackY = netY;
+			return;
+		}
+				
 		if (Math.abs(opponent.getNetTop() - enemyGoalie.getY())>=Math.abs(opponent.getNetBottom() - enemyGoalie.getY())) {
 			attackY = opponent.getNetTop()-25;
 		}
