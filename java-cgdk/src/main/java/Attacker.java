@@ -8,6 +8,7 @@ public class Attacker implements Role{
     
     public static double ATTACK_ZONE_RADIUS = 200; //half of net height
     public static double ACCURACY = 1.7; // higher number - more accuracy. Should be >1
+    public static double FORCE = 15; // swing orce before shoot puck/ Should be between 0 and 20(not recommended), where 0 - shoot puck without swing
 	public double centerY;
 	
 	private Hockeyist self;
@@ -56,10 +57,10 @@ public class Attacker implements Role{
 	            		move.setAction(ActionType.SWING);
 	            	}
 	            
-	            	if (self.getSwingTicks()>17)
+	            	if (self.getSwingTicks()>18)
 	            		move.setAction(ActionType.STRIKE);
 	            
-	            	if ((Math.abs(angleToNet) < STRIKE_ANGLE/ACCURACY)&&(self.getSwingTicks()>15)) {
+	            	if ((Math.abs(angleToNet) < STRIKE_ANGLE/ACCURACY)&&(self.getSwingTicks()>FORCE)) {
 	            		move.setAction(ActionType.STRIKE);
 	            	}
 	            }
@@ -72,6 +73,7 @@ public class Attacker implements Role{
 	            move.setTurn(self.getAngleTo(world.getPuck()));
 	            move.setAction(ActionType.TAKE_PUCK);
 	     }
+		 //swing "freezing" fix
 		 if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
 			
 		
