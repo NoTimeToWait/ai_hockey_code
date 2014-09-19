@@ -94,13 +94,26 @@ public class Defender implements Role {
     	if ((Math.abs(angleToNet) < STRIKE_ANGLE/2)) {
     		move.setAction(ActionType.STRIKE);
     	}*/
-		double angleToNet = self.getAngleTo(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
-    	move.setTurn(angleToNet);
+		
+		if (!isEnemyInUpperPart()){
+		
+			double angleForRichochet = self.getAngleTo(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
+			move.setTurn(angleForRichochet);
     	
-    	//either wait for teammate to be ready to catch pass or shoot immideatly if enemy almos near GOALIE
-		double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
-    	if (((Math.abs(angleToNet) < STRIKE_ANGLE/2) && isTeammateReadyToCatchPass()) || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) 
-    		move.setAction(ActionType.STRIKE);
+			//either wait for teammate to be ready to catch pass or shoot immideatly if enemy almos near GOALIE
+			double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
+			if (((Math.abs(angleForRichochet) < STRIKE_ANGLE/2) && isTeammateReadyToCatchPass()) || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) 
+				move.setAction(ActionType.STRIKE);
+		}
+		else {
+			double angleForRichochet = self.getAngleTo(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, world.getHeight());
+			move.setTurn(angleForRichochet);
+    	
+			//either wait for teammate to be ready to catch pass or shoot immideatly if enemy almos near GOALIE
+			double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
+			if (((Math.abs(angleForRichochet) < STRIKE_ANGLE/2) && isTeammateReadyToCatchPass()) || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) 
+				move.setAction(ActionType.STRIKE);
+		}
 	}
 	
 	private void handleIncomingPuck() {
@@ -148,6 +161,14 @@ public class Defender implements Role {
 	private boolean isEnemyInProximity(){
 		for (int i=0; i<guys.length; i++) 
 			if (self.getDistanceTo(guys[i])<world.getWidth()/3 && !guys[i].isTeammate())  return true;
+		return false;
+	}
+	
+	private boolean isEnemyInUpperPart() {
+		double totalHeightSum = 0;
+		for (int i=0; i<guys.length; i++) 
+			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i].getY() - centerY; 
+		if(totalHeightSum<0) return true;
 		return false;
 	}
 	

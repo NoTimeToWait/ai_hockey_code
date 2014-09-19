@@ -83,25 +83,39 @@ public class Attacker implements Role{
 	
 	private void getReadyForPass() {
 		getShootingPositions();
-		if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
+		if (!isEnemyInUpperPart()) {
+			if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
 				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS);
 				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
 				move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
+			}
+			else {
+				move.setTurn(self.getAngleTo(world.getPuck()));
+				handleIncomingPuck();
+			}
 		}
 		else {
-			move.setTurn(self.getAngleTo(world.getPuck()));
-			handleIncomingPuck();
+			if (self.getDistanceTo(shootPosX, shootPosY2)>ATTACK_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS);
+				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+				move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
+			}
+			else {
+				move.setTurn(self.getAngleTo(world.getPuck()));
+				handleIncomingPuck();
+			}
 		}
 			
 	}
 	
-	/*
+	
 	private boolean isEnemyInUpperPart() {
-		double totalHeightSum;
+		double totalHeightSum = 0;
 		for (int i=0; i<guys.length; i++) 
-			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i]. return true;
-		
-	}*/
+			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i].getY() - centerY; 
+		if(totalHeightSum<0) return true;
+		return false;
+	}
 	
 	private void handleIncomingPuck() {
 		
