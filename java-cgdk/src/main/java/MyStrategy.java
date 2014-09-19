@@ -15,6 +15,7 @@ public final class MyStrategy implements Strategy {
     		else role = new Attacker();
     	}
     	
+    	if (world.getTick()==5999) System.out.println(world.getMyPlayer().getGoalCount()+" "+world.getOpponentPlayer().getGoalCount());
     	role.act(self, world, game, move);
         /*
     	if (world.getPuck().getOwnerHockeyistId() == self.getId()) {

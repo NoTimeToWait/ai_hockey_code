@@ -63,11 +63,15 @@ public class Attacker implements Role{
 	            		move.setAction(ActionType.STRIKE);
 	            	}
 	            }
-	        } else {
+	        }
+		 else if (world.getPuck().getOwnerPlayerId() == ownside.getId()) {
+			 getReadyForPass();
+		 }
+		 else {
 	            move.setSpeedUp(1.0D);
 	            move.setTurn(self.getAngleTo(world.getPuck()));
 	            move.setAction(ActionType.TAKE_PUCK);
-	        }
+	     }
 		
 	}
 	
@@ -75,6 +79,38 @@ public class Attacker implements Role{
 		if (self.getDistanceTo(shootPosX, shootPosY1)<=ATTACK_ZONE_RADIUS) return true;
 		if (self.getDistanceTo(shootPosX, shootPosY2)<=ATTACK_ZONE_RADIUS) return true;
 		return false;
+	}
+	
+	private void getReadyForPass() {
+		getShootingPositions();
+		if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS);
+				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+				move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
+		}
+		else {
+			move.setTurn(self.getAngleTo(world.getPuck()));
+			handleIncomingPuck();
+		}
+			
+	}
+	
+	/*
+	private boolean isEnemyInUpperPart() {
+		double totalHeightSum;
+		for (int i=0; i<guys.length; i++) 
+			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i]. return true;
+		
+	}*/
+	
+	private void handleIncomingPuck() {
+		
+		
+		//strike it if possible
+		
+		if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
+				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2))
+				move.setAction(ActionType.TAKE_PUCK);
 	}
 	
 	private void getShootingPositions() {
