@@ -72,7 +72,7 @@ public class Defender implements Role {
 	        move.setTurn(self.getAngleTo(defendX, defendY));
 		}
 
-		if ((dist>self.getRadius()/2) && (dist<self.getRadius()*5)
+		if ((dist>self.getRadius()/2) && (dist<self.getRadius()*6+30)
 				&&(Math.abs(self.getAngleTo(defendX, defendY))>Math.PI-0.05)) {
 				//if we find that defense point right at guy's back and he is quite far away from it
 				//we slowly progress backwards
@@ -209,7 +209,10 @@ public class Defender implements Role {
 		*/
 		if (isBlueTeam()) defendX = ownside.getNetFront() + DEFEND_ZONE_RADIUS+5;
 		else defendX = ownside.getNetFront() - DEFEND_ZONE_RADIUS-5;
-		
+		if (world.getTick()>6000) {
+			if (isBlueTeam()) defendX = ownside.getNetFront() + 40;
+			else defendX = ownside.getNetFront() - 40;
+		}
 		defendY = centerY;
 		
 	}

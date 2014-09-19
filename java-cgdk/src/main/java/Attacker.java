@@ -47,7 +47,7 @@ public class Attacker implements Role{
 	            getOffensiveXY();
 	            getShootingPositions();
 	            //if (!withinShootArea()&&(self.getLastAction()!=ActionType.SWING)) moveToShootingPosition();
-	            if (!withinShootArea()) moveToShootingPosition();
+	            if (!withinShootArea()&&world.getTick()<6000) moveToShootingPosition();
 	            else {
 	            	double angleToNet = self.getAngleTo(attackX, attackY);
 	            	move.setTurn(angleToNet);
@@ -178,7 +178,8 @@ public class Attacker implements Role{
 			attackY = opponent.getNetTop()-25;
 		}
 		else attackY = opponent.getNetBottom()+25;
-		//attackY = 2*netY - enemyGoalie.getY();		
+		
+		if (world.getTick()>6000) attackY = netY;	
 	
 	}
 
