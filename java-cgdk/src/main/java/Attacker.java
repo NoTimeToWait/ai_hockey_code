@@ -15,6 +15,7 @@ public class Attacker implements Role{
 	private World world;
 	private Game game;
 	private Move move;
+	private Status status = Status.NONE;
 	private Player ownside;
 	private Player opponent;
 	private Hockeyist[] guys;
@@ -31,7 +32,52 @@ public class Attacker implements Role{
 	//enemy net coord
 	private double netX;
 	private double netY;
-
+/*
+	public void act(Hockeyist self, World world, Game game, Move move) {
+		HeadQuarters.update(this, world, game, move, self);
+		double Y = 230;
+		if (world.getPuck().getOwnerHockeyistId() == self.getId()) {
+            	double angleToNet = self.getAngleTo(900, Y);
+            	double dif = self.getY() - 150;
+            	double angleToShoot = self.getAngleTo(self.getX()-dif*3, 150);
+            	if (self.getDistanceTo(900, Y)>1) {
+            		move.setTurn(angleToNet);
+                	move.setSpeedUp(0.1D*self.getDistanceTo(900, Y)/150);
+            	}
+            	else {
+            		move.setTurn(angleToShoot);
+            	}
+            	if (Math.abs(angleToShoot) < 0.005 && self.getSpeedX()<0.01) {
+            		
+            		System.out.println("----------"+(self.getX()-dif));
+            		
+            		move.setAction(ActionType.STRIKE);
+            		HeadQuarters.updateTime(world);
+            	}
+            	
+            	
+        }
+		else {
+            move.setSpeedUp(1.0D);
+            move.setTurn(self.getAngleTo(world.getPuck()));
+            move.setAction(ActionType.TAKE_PUCK);
+		}
+	}
+	*/
+	public String getType() {
+		return "Attacker";
+	}
+	
+	public Status getStatus() {
+		return status;
+	}
+	
+	//right now not necessary since we have only 1 attacker on the field (no need to pass). But later with more hockeyists on the field
+	//could possibly implement this
+	public Point getPassDirection(){
+		return new Point(shootPosX, shootPosY1);
+	}
+	
 	public void act(Hockeyist self, World world, Game game, Move move) {
 		
 		
@@ -44,9 +90,13 @@ public class Attacker implements Role{
 		centerY = (ownside.getNetBottom()+ownside.getNetTop())/2;
 		guys = world.getHockeyists();
 		
+		getOffensiveXY();
+        getShootingPositions();
+        if (world.getPuck().getOwnerPlayerId() == opponent.getId()) {
+        	moveToStandByPosition();
+        }
 		 if (world.getPuck().getOwnerHockeyistId() == self.getId()) {	            
-	            getOffensiveXY();
-	            getShootingPositions();
+	            
 	            //if (!withinShootArea()&&(self.getLastAction()!=ActionType.SWING)) moveToShootingPosition();
 	            if (!withinShootArea()&&world.getTick()<6000) moveToShootingPosition();
 	            else {
@@ -68,14 +118,11 @@ public class Attacker implements Role{
 		 else if (world.getPuck().getOwnerPlayerId() == ownside.getId()) {
 			 getReadyForPass();
 		 }
-		 else {
-	            move.setSpeedUp(1.0D);
-	            move.setTurn(self.getAngleTo(world.getPuck()));
-	            move.setAction(ActionType.TAKE_PUCK);
-	     }
+		 else pickUpPuck(); 
+		 
 		 //swing "freezing" fix
 		 if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
-			
+		 HeadQuarters.update(this, world, game, move);
 		
 	}
 	
@@ -85,34 +132,63 @@ public class Attacker implements Role{
 		return false;
 	}
 	
+	private void pickUpPuck() {
+		if (world.getPuck().getOwnerPlayerId() != ownside.getId() && 
+				 world.getPuck().getOwnerPlayerId() != opponent.getId() &&
+				 world.getPuck().getSpeedX()<2 &&
+				 isPuckInProximity()){
+	            move.setSpeedUp(1.0D);
+	            move.setTurn(self.getAngleTo(world.getPuck()));
+	            move.setAction(ActionType.TAKE_PUCK);
+	     }	  
+		else moveToStandByPosition();
+	}
+	
+	private boolean isPuckInProximity() {
+		for (int i=0; i<guys.length; i++) {
+			if (!guys[i].isTeammate() && guys[i].getType()!=HockeyistType.GOALIE && 
+				world.getPuck().getDistanceTo(guys[i])<world.getPuck().getDistanceTo(self))
+					return false;
+		}
+		return true;
+	}
+	
 	private void getReadyForPass() {
 		getShootingPositions();
-		if (!isEnemyInUpperPart()) {
-			if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
-				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS);
-				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
-				move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
-			}
-			else {
-				move.setTurn(self.getAngleTo(world.getPuck()));
-				handleIncomingPuck();
-			}
+		Role availableDefender = HeadQuarters.askDefenders(Status.PASS_AVAILABLE); 
+		if (availableDefender == null) {
+			moveToStandByPosition();
+			return;
 		}
 		else {
-			if (self.getDistanceTo(shootPosX, shootPosY2)>ATTACK_ZONE_RADIUS) {
-				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS);
-				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
-				move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
+			Point passDirection = availableDefender.getPassDirection();
+			//TODO change to exact
+			if (passDirection.getY()<100) {
+				if (self.getDistanceTo(shootPosX, shootPosY1+100)>ATTACK_ZONE_RADIUS) {
+					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS);
+					move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+					move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
+				}
+				else {
+					move.setTurn(self.getAngleTo(world.getPuck()));
+					handleIncomingPuck();
+				}
 			}
 			else {
-				move.setTurn(self.getAngleTo(world.getPuck()));
-				handleIncomingPuck();
+				if (self.getDistanceTo(shootPosX, shootPosY2-100)>ATTACK_ZONE_RADIUS) {
+					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS);
+					move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+					move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
+				}
+				else {
+					move.setTurn(self.getAngleTo(world.getPuck()));
+					handleIncomingPuck();
+				}
 			}
 		}
 			
 	}
-	
-	
+	/*
 	private boolean isEnemyInUpperPart() {
 		double totalHeightSum = 0;
 		for (int i=0; i<guys.length; i++) 
@@ -120,12 +196,8 @@ public class Attacker implements Role{
 		if(totalHeightSum<0) return true;
 		return false;
 	}
-	
+	*/
 	private void handleIncomingPuck() {
-		
-		
-		//strike it if possible
-		
 		if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
 				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2))
 				move.setAction(ActionType.TAKE_PUCK);
@@ -141,11 +213,31 @@ public class Attacker implements Role{
 		
 	}
 	
+	private void moveToStandByPosition() {
+		if (self.getDistanceTo(shootPosX, centerY)>ATTACK_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS*2);
+				move.setSpeedUp(distScaleSpeed);
+				move.setTurn(self.getAngleTo(shootPosX, centerY));
+				
+		}
+		if (self.getDistanceTo(world.getPuck())<game.getStickLength()*1.5) {
+			move.setTurn(self.getAngleTo(world.getPuck()));
+		}
+		if (self.getDistanceTo(world.getPuck())<game.getStickLength()
+				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2))
+				move.setAction(ActionType.TAKE_PUCK);
+		
+		else {
+			move.setTurn(self.getAngleTo(world.getPuck()));
+			status = Status.STAND_BY;
+		}
+	}
+	
 	private void moveToShootingPosition() {
 		if (self.getDistanceTo(shootPosX, shootPosY1)<self.getDistanceTo(shootPosX, shootPosY2)) {
 			if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
 					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS*2);
-					move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+					move.setSpeedUp(distScaleSpeed);
 					move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
 			}
 			else move.setTurn(self.getAngleTo(attackX, attackY));
@@ -153,7 +245,7 @@ public class Attacker implements Role{
 		else {
 			if (self.getDistanceTo(shootPosX, shootPosY2)>ATTACK_ZONE_RADIUS) {
 				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS*2);
-				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+				move.setSpeedUp(distScaleSpeed);
 				move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
 			}
 			else move.setTurn(self.getAngleTo(attackX, attackY));
@@ -186,8 +278,11 @@ public class Attacker implements Role{
 		}
 		else attackY = opponent.getNetBottom()+25;
 		
-		if (world.getTick()>6000) attackY = netY;	
+		//if (world.getTick()>6000) attackY = netY;	
 	
 	}
-
+	
+	public Hockeyist getHockeyist() {
+		return self;
+	}
 }

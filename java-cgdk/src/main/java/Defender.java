@@ -1,3 +1,4 @@
+
 import model.*;
 
 public class Defender implements Role {
@@ -14,17 +15,30 @@ public class Defender implements Role {
 	private Move move;
 	private Player ownside;
 	private Player opponent;
+	private Status status = Status.NONE;
 	private Hockeyist[] guys;
 	private Hockeyist ourGoalie;
 	private Hockeyist ourBuddy;
 	private double defendX;
 	private double defendY;
-	
+		
 	//coords of our net  center poing, where enemy goal will count
 	private double goalDefX;
 	private double goalDefY;
 	
+	public String getType() {
+		return "Defender";
+	}
 	
+	public Status getStatus() {
+		return status;
+	}
+	
+	//later with implemented Prediction model could possible return final puck "meeting" position
+	//right now only general shooting direction
+	public Point getPassDirection(){
+		return calcPassDirection();
+	}
 	
 	public void act(Hockeyist self, World world, Game game, Move move){
 		this.self = self;
@@ -44,8 +58,9 @@ public class Defender implements Role {
 		moveToNet();
 		if (world.getPuck().getOwnerHockeyistId() == self.getId()) handlePass();
 		else handleIncomingPuck();
-		if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
 		
+		if(self.getLastAction() == ActionType.SWING && world.getPuck().getOwnerHockeyistId() != self.getId()) move.setAction(ActionType.CANCEL_STRIKE);
+		HeadQuarters.update(this, world, game, move);
 	}
 	
 	private void moveToNet() {
@@ -96,39 +111,35 @@ public class Defender implements Role {
     	if ((Math.abs(angleToNet) < STRIKE_ANGLE/2)) {
     		move.setAction(ActionType.STRIKE);
     	}*/
-		
-		if (!isEnemyInUpperPart()){
-		
-			double angleForRichochet = self.getAngleTo(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
-			move.setTurn(angleForRichochet);
-    	
-			//either wait for teammate to be ready to catch pass or shoot immideatly if enemy almos near GOALIE
-			double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
-			if (((Math.abs(angleForRichochet) < STRIKE_ANGLE/2) && isTeammateReadyToCatchPass()) || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) 
-				move.setAction(ActionType.STRIKE);
+		status = Status.PASS_AVAILABLE;
+		Point passPoint = calcPassDirection();
+		double angleForPass = self.getAngleTo(passPoint.getX(), passPoint.getY());
+		double angleToOwnNet = self.getAngleTo(goalDefX, goalDefY);
+		move.setTurn(angleForPass);
+		if ((Math.abs(angleForPass) < STRIKE_ANGLE/1.4) && isTeammateReadyToCatchPass() || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) {
+			move.setAction(ActionType.STRIKE);
 		}
-		else {
-			double angleForRichochet = self.getAngleTo(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, world.getHeight());
-			move.setTurn(angleForRichochet);
-    	
-			//either wait for teammate to be ready to catch pass or shoot immideatly if enemy almos near GOALIE
-			double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
-			if (((Math.abs(angleForRichochet) < STRIKE_ANGLE/2) && isTeammateReadyToCatchPass()) || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) 
-				move.setAction(ActionType.STRIKE);
-		}
+		
+	}
+	
+	private Point calcPassDirection() {
+		if (!isEnemyInUpperPart())
+			return new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
+		else 
+			return new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, world.getHeight());
+			
 	}
 	
 	private void handleIncomingPuck() {
-		
-		
+		if (HeadQuarters.getLastPuckOwner().equals("Opponent")) status = Status.DEFENDING;
 		double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
 		//strike it if possible
 		
-		if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
+		/*if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
 				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2)
 				&&(angleToOwnNet>Math.PI/6) //make sure to check we are not facing our own net so we won't have autogoal
 				&& !CATCH_PUCK)
-				move.setAction(ActionType.STRIKE);
+				move.setAction(ActionType.STRIKE);*/
 		if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
 				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2)
 				&&(angleToOwnNet>Math.PI/6) //make sure to check we are not facing our own net so we won't have autogoal
@@ -145,24 +156,29 @@ public class Defender implements Role {
 		
 	}
 	
-
+/*
 	//check if enemy has puck
 	private boolean isEnemyWithPuck() {
-		if (world.getPuck().getOwnerPlayerId()!=opponent.getId()) return false;
-		return true;
+		if (world.getPuck().getOwnerPlayerId()==opponent.getId()) return true;
+		return false;
 	}
 	
-
 	//check if puck is on our side
 	private boolean isPuckOnOurField() {
 		if (Math.abs(world.getPuck().getX()-ownside.getNetFront())>world.getWidth()/2) return false;
 		return true;
 	}
 	
+	private boolean inNetDefendZone(Unit target) {
+		if (Math.hypot(target.getX()-ownside.getNetFront(), target.getY()-world.getWidth()/2)<this.DEFEND_ZONE_RADIUS) return true;
+		return false;
+	}
+	*/
+	
 	//check if enemy is close to our Goalie
 	private boolean isEnemyInProximity(){
 		for (int i=0; i<guys.length; i++) 
-			if (self.getDistanceTo(guys[i])<world.getWidth()/3 && !guys[i].isTeammate())  return true;
+			if (self.getDistanceTo(guys[i])<game.getStickLength()*2 && !guys[i].isTeammate())  return true;
 		return false;
 	}
 	
@@ -174,10 +190,7 @@ public class Defender implements Role {
 		return false;
 	}
 	
-	private boolean inNetDefendZone(Unit target) {
-		if (Math.hypot(target.getX()-ownside.getNetFront(), target.getY()-world.getWidth()/2)<this.DEFEND_ZONE_RADIUS) return true;
-		return false;
-	}
+	
 	
 	private boolean isTeammateReadyToCatchPass() {
 		for (int i=0; i<guys.length; i++) 
@@ -189,24 +202,6 @@ public class Defender implements Role {
 	//finds best defensive position on the field for current tick with account of enemy position,
 	//puck position, goalie position, another defender position etc
 	private void getDefensiveXY(){
-		/*obsolete, mb will have some use in future
-		//find defendX
-		if (isBlueTeam()) defendX = ownside.getNetFront()+self.getRadius();
-		else defendX = ownside.getNetFront()-self.getRadius();
-		
-		//look for our goalie
-		for (int i=0; i<guys.length; i++) {
-			if ((guys[i].getType() == HockeyistType.GOALIE) &&
-				(Math.abs(guys[i].getX() - ownside.getNetFront())<world.getWidth()/2)) {
-				this.ourGoalie = guys[i];
-				break;
-			}
-		}
-		
-		//find defendY
-		if (world.getPuck().getY()<= ourGoalie.getY()) defendY = ourGoalie.getY() + 2*self.getRadius();
-		else defendY = ourGoalie.getY() - 2*self.getRadius();
-		*/
 		if (isBlueTeam()) defendX = ownside.getNetFront() + DEFEND_ZONE_RADIUS+5;
 		else defendX = ownside.getNetFront() - DEFEND_ZONE_RADIUS-5;
 		if (world.getTick()>6000) {
@@ -215,6 +210,10 @@ public class Defender implements Role {
 		}
 		defendY = centerY;
 		
+	}
+
+	public Hockeyist getHockeyist() {
+		return self;
 	}
 	
 	
