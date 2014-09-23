@@ -6,7 +6,8 @@ public class Attacker implements Role{
 
     private static final double STRIKE_ANGLE = 1.0D * Math.PI / 180.0D;
     
-    public static double ATTACK_ZONE_RADIUS = 200; //half of net height
+    public static double ATTACK_ZONE_RADIUS = 175; //half of net height
+    public static double SPEED_ZONE_RADIUS = 150;
     public static double ACCURACY = 1.7; // higher number - more accuracy. Should be >1
     public static double FORCE = 15; // swing orce before shoot puck/ Should be between 0 and 20(not recommended), where 0 - shoot puck without swing
 	public double centerY;
@@ -146,8 +147,8 @@ public class Attacker implements Role{
 	
 	private boolean isPuckInProximity() {
 		for (int i=0; i<guys.length; i++) {
-			if (!guys[i].isTeammate() && guys[i].getType()!=HockeyistType.GOALIE && 
-				world.getPuck().getDistanceTo(guys[i])<world.getPuck().getDistanceTo(self))
+			if (/*!guys[i].isTeammate() &&*/ guys[i].getType()!=HockeyistType.GOALIE && 
+				world.getPuck().getDistanceTo(guys[i])<world.getPuck().getDistanceTo(self)+self.getRadius()*3)
 					return false;
 		}
 		return true;
@@ -161,30 +162,7 @@ public class Attacker implements Role{
 			return;
 		}
 		else {
-			Point passDirection = availableDefender.getPassDirection();
-			//TODO change to exact
-			if (passDirection.getY()<100) {
-				if (self.getDistanceTo(shootPosX, shootPosY1+100)>ATTACK_ZONE_RADIUS) {
-					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS);
-					move.setSpeedUp(distScaleSpeed*distScaleSpeed);
-					move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
-				}
-				else {
-					move.setTurn(self.getAngleTo(world.getPuck()));
-					handleIncomingPuck();
-				}
-			}
-			else {
-				if (self.getDistanceTo(shootPosX, shootPosY2-100)>ATTACK_ZONE_RADIUS) {
-					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS);
-					move.setSpeedUp(distScaleSpeed*distScaleSpeed);
-					move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
-				}
-				else {
-					move.setTurn(self.getAngleTo(world.getPuck()));
-					handleIncomingPuck();
-				}
-			}
+			moveToPassReadyPosition(availableDefender);
 		}
 			
 	}
@@ -204,9 +182,9 @@ public class Attacker implements Role{
 	}
 	
 	private void getShootingPositions() {
-		shootPosX = world.getWidth()/2 + (opponent.getNetFront() - world.getWidth()/2)/4.5; //(world.getWidth()/2 + opponent.getNetFront())/2;
-		shootPosY1 =  centerY - 300;
-		shootPosY2 =  centerY + 300;
+		shootPosX = world.getWidth()/2 + (opponent.getNetFront() - world.getWidth()/2)/2; //(world.getWidth()/2 + opponent.getNetFront())/2;
+		shootPosY1 =  centerY - 200;
+		shootPosY2 =  centerY + 200;
 		
 		//if (world.getTick()%10==0) System.out.println(shootPosX);
 		
@@ -214,10 +192,11 @@ public class Attacker implements Role{
 	}
 	
 	private void moveToStandByPosition() {
-		if (self.getDistanceTo(shootPosX, centerY)>ATTACK_ZONE_RADIUS) {
-				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS*2);
+		double standByPosX = world.getWidth()/2 + (opponent.getNetFront() - world.getWidth()/2)/2.5;
+		if (self.getDistanceTo(standByPosX, centerY)>SPEED_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(standByPosX, centerY)/(SPEED_ZONE_RADIUS*2);
 				move.setSpeedUp(distScaleSpeed);
-				move.setTurn(self.getAngleTo(shootPosX, centerY));
+				move.setTurn(self.getAngleTo(standByPosX, centerY));
 				
 		}
 		if (self.getDistanceTo(world.getPuck())<game.getStickLength()*1.5) {
@@ -233,18 +212,53 @@ public class Attacker implements Role{
 		}
 	}
 	
+	private void moveToPassReadyPosition(Role defender) {
+		Point passDirection = defender.getPassDirection();
+		double readyPosX = world.getWidth()/2 + (opponent.getNetFront() - world.getWidth()/2)/4;
+		double readyPosY1 = centerY - 300;
+		double readyPosY2 = centerY + 300;
+		//TODO change to exact
+		if (passDirection.getY()<100) {
+			if (self.getDistanceTo(readyPosX, readyPosY1)>SPEED_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(readyPosX, readyPosY1)/(SPEED_ZONE_RADIUS);
+				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+				move.setTurn(self.getAngleTo(readyPosX, readyPosY1));
+			}
+			else {
+				move.setTurn(self.getAngleTo(world.getPuck()));
+				if (self.getAngleTo(world.getPuck())<STRIKE_ANGLE && self.getDistanceTo(world.getPuck())>game.getStickLength()) 
+						move.setSpeedUp(1.0D);
+				handleIncomingPuck();
+			}
+		}
+		else {
+			if (self.getDistanceTo(readyPosX, readyPosY2)>SPEED_ZONE_RADIUS) {
+				double distScaleSpeed = self.getDistanceTo(readyPosX, readyPosY2)/(SPEED_ZONE_RADIUS);
+				move.setSpeedUp(distScaleSpeed*distScaleSpeed);
+				move.setTurn(self.getAngleTo(readyPosX, readyPosY2));
+			}
+			else {
+				move.setTurn(self.getAngleTo(world.getPuck()));
+				if (self.getAngleTo(world.getPuck())<STRIKE_ANGLE && self.getDistanceTo(world.getPuck())>game.getStickLength()) 
+						move.setSpeedUp(0.1D);
+				handleIncomingPuck();
+			}
+		}
+	}
+	
 	private void moveToShootingPosition() {
+		double newAttackRadius = ATTACK_ZONE_RADIUS+25;
 		if (self.getDistanceTo(shootPosX, shootPosY1)<self.getDistanceTo(shootPosX, shootPosY2)) {
-			if (self.getDistanceTo(shootPosX, shootPosY1)>ATTACK_ZONE_RADIUS) {
-					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(ATTACK_ZONE_RADIUS*2);
+			if (self.getDistanceTo(shootPosX, shootPosY1)>newAttackRadius) {
+					double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY1)/(newAttackRadius*2);
 					move.setSpeedUp(distScaleSpeed);
 					move.setTurn(self.getAngleTo(shootPosX, shootPosY1));
 			}
 			else move.setTurn(self.getAngleTo(attackX, attackY));
 		}
 		else {
-			if (self.getDistanceTo(shootPosX, shootPosY2)>ATTACK_ZONE_RADIUS) {
-				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(ATTACK_ZONE_RADIUS*2);
+			if (self.getDistanceTo(shootPosX, shootPosY2)>newAttackRadius) {
+				double distScaleSpeed = self.getDistanceTo(shootPosX, shootPosY2)/(newAttackRadius*2);
 				move.setSpeedUp(distScaleSpeed);
 				move.setTurn(self.getAngleTo(shootPosX, shootPosY2));
 			}

@@ -26,6 +26,11 @@ public class Defender implements Role {
 	private double goalDefX;
 	private double goalDefY;
 	
+	private Point passPoint;
+	private boolean passReleased = true;
+	
+	private boolean isEnemyInUpperPart = false;
+	
 	public String getType() {
 		return "Defender";
 	}
@@ -37,9 +42,9 @@ public class Defender implements Role {
 	//later with implemented Prediction model could possible return final puck "meeting" position
 	//right now only general shooting direction
 	public Point getPassDirection(){
-		return calcPassDirection();
+		return passPoint;
 	}
-	
+		
 	public void act(Hockeyist self, World world, Game game, Move move){
 		this.self = self;
 		this.world = world;
@@ -112,26 +117,47 @@ public class Defender implements Role {
     		move.setAction(ActionType.STRIKE);
     	}*/
 		status = Status.PASS_AVAILABLE;
-		Point passPoint = calcPassDirection();
+		/*if (passReleased) {
+			passPoint = calcPassDirection();
+			passReleased = false;
+		}*/
+		passReleased = false;
+		passPoint = calcPassDirection();
 		double angleForPass = self.getAngleTo(passPoint.getX(), passPoint.getY());
 		double angleToOwnNet = self.getAngleTo(goalDefX, goalDefY);
 		move.setTurn(angleForPass);
-		if ((Math.abs(angleForPass) < STRIKE_ANGLE/1.4) && isTeammateReadyToCatchPass() || (isEnemyInProximity()&&(angleToOwnNet>Math.PI/6))) {
-			move.setAction(ActionType.STRIKE);
+		if ((Math.abs(angleForPass) < STRIKE_ANGLE)) {
+			move.setSpeedUp(0.5D);
+		}
+		if ((Math.abs(angleForPass) < STRIKE_ANGLE/1.2) && isTeammateReadyToCatchPass() || 
+			(isEnemyInProximity()&&(angleToOwnNet>Math.PI/6)) || 
+			Math.min(Math.abs(150 - self.getY()), Math.abs(770 - self.getY()))<150 ) {
+				move.setAction(ActionType.STRIKE);
+				passReleased = true;
 		}
 		
 	}
 	
 	private Point calcPassDirection() {
-		if (!isEnemyInUpperPart())
-			return new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
+		double totalHeightSum = 0;
+		for (int i=0; i<guys.length; i++) 
+			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i].getY() - centerY; 
+
+		if (totalHeightSum<-100*HeadQuarters.HOCKEYIST_NUMBER) isEnemyInUpperPart = true;
+		if (totalHeightSum>100*HeadQuarters.HOCKEYIST_NUMBER) isEnemyInUpperPart = false;
+		
+		Point target;
+		if (!isEnemyInUpperPart)
+			target = new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, 0);
 		else 
-			return new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, world.getHeight());
-			
+			target = new Point(world.getWidth()/2 - (opponent.getNetFront() - world.getWidth()/2)/3, world.getHeight());
+		return target;
 	}
 	
 	private void handleIncomingPuck() {
-		if (HeadQuarters.getLastPuckOwner().equals("Opponent")) status = Status.DEFENDING;
+		if (HeadQuarters.getLastPuckOwner().equals("Opponent")) {
+			status = Status.DEFENDING;
+		}
 		double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
 		//strike it if possible
 		
@@ -182,19 +208,21 @@ public class Defender implements Role {
 		return false;
 	}
 	
+	/*
 	private boolean isEnemyInUpperPart() {
 		double totalHeightSum = 0;
 		for (int i=0; i<guys.length; i++) 
 			if (!guys[i].isTeammate()&&guys[i].getType()!=HockeyistType.GOALIE)  totalHeightSum += guys[i].getY() - centerY; 
+		if (total)
 		if(totalHeightSum<0) return true;
 		return false;
-	}
+	}*/
 	
 	
 	
 	private boolean isTeammateReadyToCatchPass() {
 		for (int i=0; i<guys.length; i++) 
-			if (self.getDistanceTo(guys[i])>world.getWidth()/2 && guys[i].isTeammate())  return true;
+			if (self.getDistanceTo(guys[i])>world.getWidth()/2-100 && guys[i].isTeammate())  return true;
 		
 		return false;
 	}

@@ -3,6 +3,7 @@ import model.*;
 
 public class HeadQuarters{
 	// HeadQuarters class implements centralized coordination and order dispatch depending on field situation analysis.
+	public static int HOCKEYIST_NUMBER = 2;
 	private static World world;
 	private static Game game;
 	private static Move[] orders;
