@@ -11,8 +11,9 @@ public final class MyStrategy implements Strategy {
     public void move(Hockeyist self, World world, Game game, Move move) {
     	
     	if (role==null) {
-    		if (self.getX()==300||self.getX()==900) role = new Defender();
-    		else role = new Attacker();
+    		//if (self.getX()==300||self.getX()==900) role = new Defender();
+    		//else role = new Attacker();
+    		role = new Semidefender();
     	}
     	
     	//if (world.getTick()==5999) System.out.println(world.getMyPlayer().getGoalCount()+" "+world.getOpponentPlayer().getGoalCount());
