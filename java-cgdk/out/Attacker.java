@@ -1,3 +1,8 @@
+package model;
+import HeadQuarters;
+import Point;
+import Role;
+import Status;
 import model.*;
 
 

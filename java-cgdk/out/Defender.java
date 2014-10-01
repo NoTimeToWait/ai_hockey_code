@@ -1,4 +1,9 @@
+package model;
 
+import HeadQuarters;
+import Point;
+import Role;
+import Status;
 import model.*;
 
 public class Defender implements Role {

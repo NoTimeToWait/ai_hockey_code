@@ -86,6 +86,14 @@ public class Semidefender implements Role {
 		
 		double dist = self.getDistanceTo(defendX, defendY); //Math.hypot(defendX-self.getX(), defendY-self.getY());
 		
+		if (self.getY()<350||self.getY()>570) {
+			double speedScaleAngle = 1.0-Math.abs(self.getAngleTo(defendX, defendY))/Math.PI;
+			move.setSpeedUp(speedScaleAngle*speedScaleAngle);
+	        move.setTurn(self.getAngleTo(defendX, defendY));
+		}
+		if (Math.abs(self.getX()-ownside.getNetFront())>130) {
+			move.setSpeedUp(-0.2D);
+		}
 		//short dist and in front of this guy
 		if ((dist>self.getRadius()*1.5)&&(dist<=self.getRadius()*4)&&(self.getSpeedX()<1)
 			&&(Math.abs(self.getAngleTo(defendX, defendY))<0.5)){
@@ -125,11 +133,17 @@ public class Semidefender implements Role {
 		if (HeadQuarters.getLastPuckOwner().equals("Opponent")) {
 			status = Status.DEFENDING;
 		}
+		double angleToPuck = Math.abs(self.getAngleTo(world.getPuck()));
 		double angleToOwnNet = Math.abs(self.getAngleTo(goalDefX, goalDefY));
-		if ((self.getDistanceTo(world.getPuck())<game.getStickLength())
-				&&(self.getAngleTo(world.getPuck())<game.getStickSector()/2)
-				&&(angleToOwnNet>Math.PI/6)) //make sure to check we are not facing our own net so we won't have autogoal
-				move.setAction(ActionType.TAKE_PUCK);
+		
+		if ((self.getDistanceTo(world.getPuck())<=game.getStickLength())
+				&&(angleToPuck<=game.getStickSector()/2)
+				&&(world.getPuck().getOwnerPlayerId()!=ownside.getId())) //make sure to check we are not facing our own net so we won't have autogoal
+				{
+					move.setAction(ActionType.TAKE_PUCK);
+					if (world.getPuck().getOwnerPlayerId()==opponent.getId()&&
+							angleToOwnNet>Math.PI/6) move.setAction(ActionType.STRIKE);
+				}
 	}
 	
 	private void attackOpponentNet() {
@@ -150,7 +164,7 @@ public class Semidefender implements Role {
 		if (totalHeightSum>=0) isEnemyInUpperPart = false;
 		
 		Point target;
-		target = new Point(self.getX() - (self.getX() - opponent.getNetFront())/5, isEnemyInUpperPart? 750:170);
+		target = new Point(self.getX() - (self.getX() - opponent.getNetFront())/4.75, isEnemyInUpperPart? 750:170);
 		
 		
 		

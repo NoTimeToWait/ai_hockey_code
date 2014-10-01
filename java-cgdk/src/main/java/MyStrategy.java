@@ -10,10 +10,11 @@ public final class MyStrategy implements Strategy {
     @Override
     public void move(Hockeyist self, World world, Game game, Move move) {
     	
+		double centerY = (world.getMyPlayer().getNetBottom()+world.getMyPlayer().getNetTop())/2;
+    	
     	if (role==null) {
-    		//if (self.getX()==300||self.getX()==900) role = new Defender();
-    		//else role = new Attacker();
-    		role = new Semidefender();
+    		if (self.getDistanceTo(world.getWidth()/2, centerY)<250) role = new Agressor();
+    		else role = new Semidefender();
     	}
     	
     	//if (world.getTick()==5999) System.out.println(world.getMyPlayer().getGoalCount()+" "+world.getOpponentPlayer().getGoalCount());
